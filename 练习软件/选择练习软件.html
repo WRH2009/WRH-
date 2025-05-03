@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+    <title>知识复习</title>
+    <style>
+      .correct {
+            color: green;
+        }
+
+      .wrong {
+            color: red;
+        }
+
+      .dropzone {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+        }
+
+      .uploaded-images {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+      .uploaded-images img {
+            max-width: 100px;
+            max-height: 100px;
+            object-fit: contain;
+        }
+
+      .scalable-image-container {
+            position: relative;
+            display: inline-block;
+        }
+
+      .scalable-image {
+            max-width: 100%;
+            height: auto;
+            transition: transform 0.3s ease;
+        }
+
+      .scale-button {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .hidden {
+            display: none;
+        }
+        .template-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .template-item button {
+            margin-left: 8px;
+        }
+        .template-name {
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 font-sans">
+    <div id="settings" class="p-8 max-w-md mx-auto bg-white rounded shadow">
+        <h2 class="text-2xl font-bold mb-4">设置模式</h2>
+        <label for="question-count" class="block mb-2">题目数量:</label>
+        <input type="number" id="question-count" class="w-full p-2 border border-gray-300 rounded mb-4" min="1" value="1">
+        <label for="template-name" class="block mb-2">模板名称 (可选):</label>
+        <input type="text" id="template-name" class="w-full p-2 border border-gray-300 rounded mb-4">
+        <label for="time-limit" class="block mb-2">考试时长 (分钟):</label>
+        <input type="number" id="time-limit" class="w-full p-2 border border-gray-300 rounded mb-4" min="1" value="10">
+        <div id="question-fields"></div>
+        <div id="pagination" class="flex justify-between mb-4 hidden">
+            <button id="prev-question" class="bg-gray-500 text-white p-2 rounded" onclick="prevQuestionSetting()">上一题</button>
+            <button id="next-question-setting" class="bg-gray-500 text-white p-2 rounded" onclick="nextQuestionSetting()">下一题</button>
+        </div>
+        <button id="save-template" class="bg-yellow-500 text-white p-2 rounded" onclick="saveTemplateToFile()">保存模板为文件</button>
+        <input type="file" id="load-template-file" style="display: none;" onchange="loadTemplateFromFile()">
+        <button id="upload-template" class="bg-blue-500 text-white p-2 rounded mt-4" onclick="document.getElementById('load-template-file').click()">上传模板</button>
+        <button id="start-exam" class="bg-green-500 text-white p-2 rounded ml-2" onclick="startExam()">开始考试模式</button>
+        <button id="clear-settings" class="bg-red-500 text-white p-2 rounded ml-2" onclick="clearSettings()">清空设置</button>
+        <div id="uploaded-templates" class="mt-4">
+            <h3 class="text-lg font-bold mb-2">已上传模板</h3>
+            <div id="template-list"></div>
+        </div>
+    </div>
+    <div id="quiz" class="p-8 max-w-md mx-auto bg-white rounded shadow hidden">
+        <div id="timer" class="text-right mb-4">剩余时间: <span id="remaining-time">0:00</span></div>
+        <div id="question-container"></div>
+        <div id="question-navigation" class="flex justify-between my-4">
+            <button id="prev-question-exam" class="bg-gray-500 text-white p-2 rounded" onclick="prevQuestionExam()" disabled>上一题</button>
+            <button id="next-question" class="bg-blue-500 text-white p-2 rounded" onclick="nextQuestion()">下一题</button>
+            <button id="mark-question" class="bg-orange-500 text-white p-2 rounded" onclick="markQuestion()">标记</button>
+            <button id="unmark-question" class="bg-orange-500 text-white p-2 rounded hidden" onclick="unmarkQuestion()">取消标记</button>
+        </div>
+        <div id="answer-status" class="flex flex-wrap gap-2"></div>
+    </div>
+    <div id="results" class="p-8 max-w-md mx-auto bg-white rounded shadow hidden">
+        <h2 class="text-2xl font-bold mb-4">考试结果</h2>
+        <p>用时: <span id="final-time">0:00</span></p>
+        <p>得分: <span id="score">0</span></p>
+        <div id="answer-explanations"></div>
+        <button id="back-to-settings" class="bg-gray-500 text-white p-2 rounded mr-2" onclick="backToSettings()">返回</button>
+        <button id="retry-exam" class="bg-blue-500 text-white p-2 rounded" onclick="retryExam()">重新练习</button>
+    </div>
+
+    <script>
+        let questions = [];
+        let currentSettingQuestionIndex = 0;
+        let currentQuestionIndex = 0;
+        let startTime;
+        let timerInterval;
+        let userAnswers = [];
+        let markedQuestions = [];
+        let timeLimit;
+        let endTime;
+        let uploadedTemplates = JSON.parse(localStorage.getItem('uploadedTemplates')) || [];
+
+        function generateQuestionFields() {
+            const questionCount = parseInt(document.getElementById('question-count').value);
+            const questionFields = document.getElementById('question-fields');
+            questions = [];
+
+            questionFields.innerHTML = '';
+
+            for (let i = 0; i < questionCount; i++) {
+                const questionDiv = document.createElement('div');
+                questionDiv.classList.add('mb-4', 'hidden');
+                questionDiv.id = `question-setting-${i}`;
+
+                questionDiv.innerHTML = `
+                    <p class="text-lg font-bold mb-2">题目 ${i + 1} 设置</p>
+                    <label for="question-${i}" class="block mb-2">题目内容:</label>
+                    <textarea id="question-${i}" class="w-full p-2 border border-gray-300 rounded mb-2 resize-both">${questions[i]?.question || ''}</textarea>
+                    <div class="dropzone" id="question-${i}-image-dropzone" ondrop="handleDrop(event, 'question', i)" ondragover="handleDragOver(event)">拖放或点击选择题目图片</div>
+                    <input type="file" id="question-${i}-image-file" style="display: none;" onchange="handleFileSelect(event, 'question', i)" multiple>
+                    <input type="hidden" id="question-${i}-image" value="${questions[i]?.image || ''}">
+                    <div class="uploaded-images" id="question-${i}-uploaded-images"></div>
+                    <button id="question-${i}-image-cancel" class="bg-white text-black border border-black p-2 rounded mt-2" onclick="cancelImage('question', i)">取消已设置的图片</button>
+                    <label for="option-count-${i}" class="block mb-2">选项数量 (2 - 5):</label>
+                    <input type="number" id="option-count-${i}" class="w-full p-2 border border-gray-300 rounded mb-2" min="2" max="5" value="${questions[i]?.options?.length || 4}">
+                    <div id="option-fields-${i}"></div>
+                    <label for="answer-${i}" class="block mb-2">正确答案 (选择所有正确选项):</label>
+                    <div id="answer-fields-${i}"></div>
+                    <label for="explanation-${i}" class="block mb-2">答案解析:</label>
+                    <textarea id="explanation-${i}" class="w-full p-2 border border-gray-300 rounded mb-2">${questions[i]?.explanation || ''}</textarea>
+                    <div class="dropzone" id="explanation-${i}-image-dropzone" ondrop="handleDrop(event, 'explanation', i)" ondragover="handleDragOver(event)">拖放或点击选择解析图片</div>
+                    <input type="file" id="explanation-${i}-image-file" style="display: none;" onchange="handleFileSelect(event, 'explanation', i)" multiple>
+                    <input type="hidden" id="explanation-${i}-image" value="${questions[i]?.explanationImage || ''}">
+                    <div class="uploaded-images" id="explanation-${i}-uploaded-images"></div>
+                    <button id="explanation-${i}-image-cancel" class="bg-white text-black border border-black p-2 rounded mt-2" onclick="cancelImage('explanation', i)">取消已设置的图片</button>
+                `;
+
+                questionFields.appendChild(questionDiv);
+
+                document.getElementById(`option-count-${i}`).addEventListener('input', () => {
+                    generateOptions(i);
+                    generateAnswers(i);
+                });
+
+                generateOptions(i, questions[i]?.options || []);
+                generateAnswers(i, questions[i]?.answer || []);
+            }
+
+            showQuestionSetting(0);
+            updatePagination();
+        }
+
+        function generateOptions(questionIndex, existingOptions = []) {
+            const optionCount = parseInt(document.getElementById(`option-count-${questionIndex}`).value);
+            const optionFields = document.getElementById(`option-fields-${questionIndex}`);
+            optionFields.innerHTML = '';
+
+            for (let j = 0; j < optionCount; j++) {
+                const optionInput = document.createElement('input');
+                optionInput.type = 'text';
+                optionInput.id = `option-${questionIndex}-${j}`;
+                optionInput.classList.add('w-full', 'p-2', 'border', 'border-gray-300', 'rounded', 'mb-2');
+                optionInput.placeholder = `选项 ${String.fromCharCode(65 + j)}`;
+                optionInput.value = existingOptions[j] || '';
+                optionFields.appendChild(optionInput);
+            }
+        }
+
+        function generateAnswers(questionIndex, existingAnswer = []) {
+            const optionCount = parseInt(document.getElementById(`option-count-${questionIndex}`).value);
+            const answerFields = document.getElementById(`answer-fields-${questionIndex}`);
+            answerFields.innerHTML = '';
+
+            for (let j = 0; j < optionCount; j++) {
+                const answerCheckbox = document.createElement('input');
+                answerCheckbox.type = 'checkbox';
+                answerCheckbox.id = `answer-${questionIndex}-${j}`;
+                answerCheckbox.value = j;
+                answerCheckbox.checked = existingAnswer.includes(j);
+                const answerLabel = document.createElement('label');
+                answerLabel.textContent = `选项 ${String.fromCharCode(65 + j)}`;
+                answerLabel.classList.add('block', 'mb-1');
+                answerFields.appendChild(answerCheckbox);
+                answerFields.appendChild(answerLabel);
+            }
+        }
+
+        function showQuestionSetting(index) {
+            const questionCount = parseInt(document.getElementById('question-count').value);
+            currentSettingQuestionIndex = index;
+
+            for (let i = 0; i < questionCount; i++) {
+                document.getElementById(`question-setting-${i}`).classList.toggle('hidden', i !== index);
+            }
+
+            updatePagination();
+        }
+
+        function updatePagination() {
+            const questionCount = parseInt(document.getElementById('question-count').value);
+            const pagination = document.getElementById('pagination');
+            const prevButton = document.getElementById('prev-question');
+            const nextButton = document.getElementById('next-question-setting');
+
+            pagination.classList.toggle('hidden', questionCount <= 1);
+            prevButton.disabled = currentSettingQuestionIndex === 0;
+            nextButton.disabled = currentSettingQuestionIndex === questionCount - 1;
+        }
+
+        function prevQuestionSetting() {
+            if (currentSettingQuestionIndex > 0) {
+                showQuestionSetting(currentSettingQuestionIndex - 1);
+            }
+        }
+
+        function nextQuestionSetting() {
+            const questionCount = parseInt(document.getElementById('question-count').value);
+            if (currentSettingQuestionIndex < questionCount - 1) {
+                showQuestionSetting(currentSettingQuestionIndex + 1);
+            }
+        }
+
+        function startExam() {
+            const questionCount = parseInt(document.getElementById('question-count').value);
+            questions = [];
+
+            for (let i = 0; i < questionCount; i++) {
+                const question = document.getElementById(`question-${i}`).value;
+                const image = document.getElementById(`question-${i}-image`).value;
+                const optionCount = parseInt(document.getElementById(`option-count-${i}`).value);
+                const options = Array.from({ length: optionCount }, (_, j) => 
+                    document.getElementById(`option-${i}-${j}`)?.value || ''
+                );
+                const answer = Array.from(document.querySelectorAll(`#answer-fields-${i} input:checked`), checkbox => 
+                    parseInt(checkbox.value)
+                );
+                const explanation = document.getElementById(`explanation-${i}`).value;
+                const explanationImage = document.getElementById(`explanation-${i}-image`).value;
+
+                if (answer.length === 0) {
+                    alert(`题目 ${i + 1} 未选择答案，请检查设置！`);
+                    return;
+                }
+
+                questions.push({ question, image, options, answer, explanation, explanationImage });
+            }
+
+            userAnswers = new Array(questionCount).fill(null);
+            markedQuestions = new Array(questionCount).fill(false);
+            currentQuestionIndex = 0;
+            timeLimit = parseInt(document.getElementById('time-limit').value) * 60 * 1000;
+            endTime = Date.now() + timeLimit;
+
+            document.getElementById('settings').classList.add('hidden');
+            document.getElementById('quiz').classList.remove('hidden');
+            timerInterval = setInterval(updateTimer, 1000);
+            showExamQuestion();
+        }
+
+        function showExamQuestion() {
+            const question = questions[currentQuestionIndex];
+            const questionContainer = document.getElementById('question-container');
+            const questionImages = question.image ? question.image.split('|').map(img => `
+                <div class="scalable-image-container">
+                    <img src="${img}" alt="题目图片" class="scalable-image mb-4 max-w-full h-auto">
+                    <button class="scale-button" onclick="scaleImage(this)">缩放</button>
+                </div>
+            `).join('') : '';
+
+            questionContainer.innerHTML = `
+                <p class="text-lg font-bold mb-2">题目 ${currentQuestionIndex + 1}: ${question.question}</p>
+                ${questionImages}
+                <form id="answer-form">
+                    ${question.options.map((option, index) => `
+                        <label class="block mb-2">
+                            <input type="checkbox" name="answer" value="${index}" ${userAnswers[currentQuestionIndex]?.includes(index) ? 'checked' : ''}>
+                            ${String.fromCharCode(65 + index)}. ${option}
+                        </label>
+                    `).join('')}
+                </form>
+            `;
+
+            document.getElementById('prev-question-exam').disabled = currentQuestionIndex === 0;
+            document.getElementById('next-question').textContent = currentQuestionIndex === questions.length - 1 ? '交卷' : '下一题';
+            document.getElementById('next-question').disabled = false;
+
+            const markButton = document.getElementById('mark-question');
+            const unmarkButton = document.getElementById('unmark-question');
+            if (markedQuestions[currentQuestionIndex]) {
+                markButton.classList.add('hidden');
+                unmarkButton.classList.remove('hidden');
+            } else {
+                markButton.classList.remove('hidden');
+                unmarkButton.classList.add('hidden');
+            }
+
+            updateAnswerStatusDisplay();
+        }
+
+        function nextQuestion() {
+            saveCurrentAnswer();
+
+            if (currentQuestionIndex < questions.length - 1) {
+                currentQuestionIndex++;
+                showExamQuestion();
+            } else {
+                endQuiz();
+            }
+        }
+
+        function prevQuestionExam() {
+            saveCurrentAnswer();
+            currentQuestionIndex--;
+            showExamQuestion();
+        }
+
+        function saveCurrentAnswer() {
+            const selected = Array.from(document.getElementById('answer-form').querySelectorAll('input:checked'), el => parseInt(el.value));
+            userAnswers[currentQuestionIndex] = selected.length === 0 ? null : selected.sort();
+        }
+
+        function endQuiz() {
+            clearInterval(timerInterval);
+            document.getElementById('quiz').classList.add('hidden');
+            document.getElementById('results').classList.remove('hidden');
+
+            const elapsedTime = Date.now() - startTime;
+            document.getElementById('final-time').textContent = formatTime(elapsedTime);
+
+            let score = 0;
+            const answerExplanations = document.getElementById('answer-explanations');
+            answerExplanations.innerHTML = '';
+
+            questions.forEach((q, index) => {
+                const userAnswer = userAnswers[index] || [];
+                const isCorrect = JSON.stringify(userAnswer) === JSON.stringify(q.answer);
+                score += isCorrect ? 1 : 0;
+
+                answerExplanations.innerHTML += `
+                    <div class="mb-4">
+                        <h3 class="text-lg font-bold">题目 ${index + 1}</h3>
+                        <p>你的答案: ${userAnswer.map(a => String.fromCharCode(65 + a)).join(', ') || '未作答'}</p>
+                        <p>正确答案: ${q.answer.map(a => String.fromCharCode(65 + a)).join(', ')}</p>
+                        <p>解析: ${q.explanation}</p>
+                    </div>
+                `;
+            });
+
+            document.getElementById('score').textContent = ((score / questions.length) * 100).toFixed(2);
+        }
+
+        function updateTimer() {
+            const remaining = endTime - Date.now();
+            if (remaining <= 0) {
+                endQuiz();
+                return;
+            }
+            document.getElementById('remaining-time').textContent = formatTime(remaining);
+        }
+
+        function formatTime(ms) {
+            const sec = Math.floor(ms / 1000);
+            return `${Math.floor(sec / 60)}:${sec % 60 < 10 ? '0' : ''}${sec % 60}`;
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'copy';
+        }
+
+        function handleDrop(event, type, index) {
+            event.preventDefault();
+            const files = event.dataTransfer.files;
+            handleFiles(files, type, index);
+        }
+
+        function handleFileSelect(event, type, index) {
+            const files = event.target.files;
+            handleFiles(files, type, index);
+        }
+
+        function handleFiles(files, type, index) {
+            const fileReader = new FileReader();
+            const targetId = `${type}-${index}-image`;
+            const uploadedImages = document.getElementById(`${targetId}-uploaded-images`);
+            let existingImages = document.getElementById(targetId).value.split('|').filter(Boolean);
+
+            Array.from(files).forEach(file => {
+                fileReader.readAsDataURL(file);
+                fileReader.onload = () => {
+                    existingImages.push(fileReader.result);
+                    existingImages = existingImages.slice(-3);
+                    document.getElementById(targetId).value = existingImages.join('|');
+                    renderImages(uploadedImages, existingImages);
+                };
+            });
+        }
+
+        function renderImages(container, images) {
+            container.innerHTML = '';
+            images.forEach(img => {
+                const imgElement = document.createElement('img');
+                imgElement.src = img;
+                imgElement.style.maxWidth = '100px';
+                imgElement.style.margin = '5px';
+                container.appendChild(imgElement);
+            });
+        }
+
+        function cancelImage(type, index) {
+            const targetId = `${type}-${index}-image`;
+            document.getElementById(targetId).value = '';
+            document.getElementById(`${targetId}-uploaded-images`).innerHTML = '';
+            document.getElementById(`${type}-${index}-image-dropzone`).textContent = '拖放或点击选择图片';
+        }
+
+        function saveTemplateToFile() {
+            const templateName = document.getElementById('template-name').value;
+            if (!templateName) return alert('请输入模板名称！');
+
+            const template = {
+                questionCount: parseInt(document.getElementById('question-count').value),
+                timeLimit: parseInt(document.getElementById('time-limit').value),
+                questions: questions.map((q, i) => ({
+                    question: q.question,
+                    image: document.getElementById(`question-${i}-image`).value,
+                    options: Array.from({ length: q.options.length }, (_, j) => 
+                        document.getElementById(`option-${i}-${j}`)?.value || ''
+                    ),
+                    answer: Array.from(document.querySelectorAll(`#answer-fields-${i} input:checked`), el => parseInt(el.value)),
+                    explanation: document.getElementById(`explanation-${i}`).value,
+                    explanationImage: document.getElementById(`explanation-${i}-image`).value
+                }))
+            };
+
+            const blob = new Blob([JSON.stringify(template)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `${templateName}.json`;
+            a.click();
+        }
+
+        function loadTemplateFromFile() {
+            const file = document.getElementById('load-template-file').files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const template = JSON.parse(e.target.result);
+                    const templateName = file.name.replace('.json', '');
+                    uploadedTemplates.push({ name: templateName, data: template });
+                    localStorage.setItem('uploadedTemplates', JSON.stringify(uploadedTemplates));
+                    displayUploadedTemplates();
+                } catch (error) {
+                    alert('加载模板文件时出错，请确保文件格式正确。');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function displayUploadedTemplates() {
+            const templateList = document.getElementById('template-list');
+            templateList.innerHTML = '';
+
+            uploadedTemplates.forEach((template, index) => {
+                const templateItem = document.createElement('div');
+                templateItem.classList.add('template-item');
+                templateItem.innerHTML = `
+                    <span class="template-name" onclick="loadTemplate(${index})">${template.name}</span>
+                    <button onclick="cancelUpload(${index})">取消上传</button>
+                `;
+                templateList.appendChild(templateItem);
+            });
+        }
+
+        function loadTemplate(index) {
+            const template = uploadedTemplates[index].data;
+            document.getElementById('question-count').value = template.questionCount;
+            document.getElementById('time-limit').value = template.timeLimit;
+            questions = template.questions;
+            generateQuestionFields();
+
+            // 填充每个题目的具体内容
+            template.questions.forEach((q, i) => {
+                document.getElementById(`question-${i}`).value = q.question;
+                document.getElementById(`question-${i}-image`).value = q.image;
+                document.getElementById(`option-count-${i}`).value = q.options.length;
+                generateOptions(i, q.options);
+                const answerFields = document.getElementById(`answer-fields-${i}`);
+                answerFields.innerHTML = '';
+                q.options.forEach((_, j) => {
+                    const answerCheckbox = document.createElement('input');
+                    answerCheckbox.type = 'checkbox';
+                    answerCheckbox.id = `answer-${i}-${j}`;
+                    answerCheckbox.value = j;
+                    answerCheckbox.checked = q.answer.includes(j);
+                    const answerLabel = document.createElement('label');
+                    answerLabel.textContent = `选项 ${String.fromCharCode(65 + j)}`;
+                    answerLabel.classList.add('block', 'mb-1');
+                    answerFields.appendChild(answerCheckbox);
+                    answerFields.appendChild(answerLabel);
+                });
+                document.getElementById(`explanation-${i}`).value = q.explanation;
+                document.getElementById(`explanation-${i}-image`).value = q.explanationImage;
+                renderImages(document.getElementById(`question-${i}-uploaded-images`), q.image ? q.image.split('|') : []);
+                renderImages(document.getElementById(`explanation-${i}-uploaded-images`), q.explanationImage ? q.explanationImage.split('|') : []);
+            });
+
+            showQuestionSetting(0);
+            updatePagination();
+        }
+
+        function cancelUpload(index) {
+            uploadedTemplates.splice(index, 1);
+            localStorage.setItem('uploadedTemplates', JSON.stringify(uploadedTemplates));
+            displayUploadedTemplates();
+        }
+
+        function clearSettings() {
+            document.getElementById('question-count').value = 1;
+            document.getElementById('template-name').value = '';
+            document.getElementById('time-limit').value = 10;
+            const questionFields = document.getElementById('question-fields');
+            questionFields.innerHTML = '';
+            questions = [];
+            generateQuestionFields();
+        }
+
+        function backToSettings() {
+            document.getElementById('settings').classList.remove('hidden');
+            document.getElementById('results').classList.add('hidden');
+            const questionCount = parseInt(document.getElementById('question-count').value);
+            for (let i = 0; i < questionCount; i++) {
+                document.getElementById(`question-${i}-image`).value = '';
+                document.getElementById(`explanation-${i}-image`).value = '';
+                document.getElementById(`question-${i}-uploaded-images`).innerHTML = '';
+                document.getElementById(`explanation-${i}-uploaded-images`).innerHTML = '';
+                document.getElementById(`question-${i}-image-dropzone`).textContent = '拖放或点击选择题目图片';
+                document.getElementById(`explanation-${i}-image-dropzone`).textContent = '拖放或点击选择解析图片';
+            }
+        }
+
+        function retryExam() {
+            document.getElementById('quiz').classList.remove('hidden');
+            document.getElementById('results').classList.add('hidden');
+            currentQuestionIndex = 0;
+            userAnswers = new Array(questions.length).fill(null);
+            markedQuestions = new Array(questions.length).fill(false);
+            startTime = Date.now();
+            timeLimit = parseInt(document.getElementById('time-limit').value) * 60 * 1000;
+            endTime = startTime + timeLimit;
+            timerInterval = setInterval(updateTimer, 1000);
+            showQuestion();
+            updateAnswerStatus();
+        }
+
+        function scaleImage(button) {
+            const image = button.previousElementSibling;
+            if (image.style.transform === 'scale(2)') {
+                image.style.transform = 'scale(1)';
+            } else {
+                image.style.transform = 'scale(2)';
+            }
+        }
+
+        function updateAnswerStatusDisplay() {
+            const answerStatusDiv = document.getElementById('answer-status');
+            answerStatusDiv.innerHTML = '';
+            userAnswers.forEach((answer, index) => {
+                const statusSpan = document.createElement('span');
+                statusSpan.textContent = `题目 ${index + 1}`;
+                if (answer || index === currentQuestionIndex) {
+                    statusSpan.style.fontWeight = 'bold';
+                    statusSpan.style.color = 'black';
+                } else {
+                    statusSpan.style.color = 'gray';
+                }
+                if (markedQuestions[index]) {
+                    statusSpan.style.color = 'red';
+                    statusSpan.style.textDecoration = 'underline';
+                }
+                answerStatusDiv.appendChild(statusSpan);
+            });
+        }
+
+        function markQuestion() {
+            markedQuestions[currentQuestionIndex] = true;
+            const markButton = document.getElementById('mark-question');
+            const unmarkButton = document.getElementById('unmark-question');
+            markButton.classList.add('hidden');
+            unmarkButton.classList.remove('hidden');
+            updateAnswerStatusDisplay();
+        }
+
+        function unmarkQuestion() {
+            markedQuestions[currentQuestionIndex] = false;
+            const markButton = document.getElementById('mark-question');
+            const unmarkButton = document.getElementById('unmark-question');
+            markButton.classList.remove('hidden');
+            unmarkButton.classList.add('hidden');
+            updateAnswerStatusDisplay();
+        }
+
+        document.getElementById('question-count').addEventListener('input', generateQuestionFields);
+        generateQuestionFields();
+        displayUploadedTemplates();
+    </script>
+</body>
+
+</html>
+    
