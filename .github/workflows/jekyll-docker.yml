@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,91 +8,91 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
     <title>知识复习</title>
     <style>
-      .正确 {
-            颜色： 绿色；
-        输入：}
+      .correct {
+            color: green;
+        }
 
-      错误 {
-            颜色： 红色；
-        输入：}
+      .wrong {
+            color: red;
+        }
 
       .dropzone {
-            边框：2px 虚线#ccc;
-            填充：20px;
-            text-align：center;
-            光标：指针；
-        输入：}
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+        }
 
-      .上传的图片 {
-            显示：弹性布局;
-            flex-wrap：wrap;
-            缝隙：10px;
-            上边距：10px;
-        输入： 输入：}
+      .uploaded-images {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
 
-      .上传图片 img {
-            最大宽度：100px;
-            最大高度：100px;
-            对象适应：包含;
-        输入：}
+      .uploaded-images img {
+            max-width: 100px;
+            max-height: 100px;
+            object-fit: contain;
+        }
 
-      .可扩展图像容器 {
-            position:             位置：相对；
-            display:             显示：内联块元素；
-        }}
+      .scalable-image-container {
+            position: relative;
+            display: inline-block;
+        }
 
-      可缩放图像 {{
-            max-width:             最大宽度：100%；
-            height:             高度：自动；
-            transition:             transition: transform 0.3s ease;
-        }}
+      .scalable-image {
+            max-width: 100%;
+            height: auto;
+            transition: transform 0.3s ease;
+        }
 
-      .scale-button {{
-            position:             位置：绝对定位；
-            top:             顶部：5px；
-            right:             右：5px；
-            background-color:             背景颜色: rgba(0, 0, 0, 0.7);, 0, 0, 0.7);
-            color:             颜色：白色;
-            border:             边框：无；
-            padding:             填充：5px 10px;
-            cursor:             光标：指针；
-        }}
-        .hidden {{
-            display:             显示：无；
-        }}
-        .template-item {{
-            display:             display: flex;
-            对齐项目：对齐项目：居中；
-            margin-bottom:             bottom外边距: 8px;
-        }}
-        .template-item 按钮 {{
-            margin-left:             左边距: 8px;
-        }}
-        .模板名称 {{
-            cursor:             光标：指针；
-        }}
-    
+      .scale-button {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .hidden {
+            display: none;
+        }
+        .template-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .template-item button {
+            margin-left: 8px;
+        }
+        .template-name {
+            cursor: pointer;
+        }
+    </style>
+</head>
 
-
-<body class="bg-gray-100 font-sans">"bg-gray-100 font-sans">
-    "settings" class="p-8 max-w-md mx-auto bg-white rounded shadow">
-        设置模式"text-2xl font-bold mb-4">设置模式</h2>
-        <label for="question-count" class="block mb-2">题目数量:</label>"question-count" class="block mb-2">题目数量:</label>
-        <输入 type="数字" id="问题数量" class="w-full p-2 border border-gray-300 rounded mb-4" min="1" value="1">"number" id="question-count" class="w-full p-2 border border-gray-300 rounded mb-4" min="1" value="1">
-        <label for="template-name" class="block mb-2">模板名称 (可选):</label>"template-name" class="block mb-2">模板名称 (可选):</label>
-        <输入 type="文本" id="模板名称" class="w-full p-2 border border-gray-300 rounded mb-4">"text" id="template-name" class="w-full p-2 border border-gray-300 rounded mb-4">
-        <label for="time-limit" class="block mb-2">考试时长 (分钟):</label>"time-limit" class="block mb-2">考试时长 (分钟):</label>
-        <输入 type="数字" id="时间限制" class="w-full p-2 border border-gray-300 rounded mb-4" min="1" value="10">"number" id="time-limit" class="w-full p-2 border border-gray-300 rounded mb-4" min="1" value="10">
-        "question-fields"></div>
-        "pagination" class="flex justify-between mb-4 hidden">
-            <button id="prev-question" class="bg-gray-500 text-white p-2 rounded" onclick="prevQuestionSetting()">上一题</button>"prev-question" class="bg-gray-500 text-white p-2 rounded" onclick="prevQuestionSetting()">上一题</button>
+<body class="bg-gray-100 font-sans">
+    <div id="settings" class="p-8 max-w-md mx-auto bg-white rounded shadow">
+        <h2 class="text-2xl font-bold mb-4">设置模式</h2>
+        <label for="question-count" class="block mb-2">题目数量:</label>
+        <input type="number" id="question-count" class="w-full p-2 border border-gray-300 rounded mb-4" min="1" value="1">
+        <label for="template-name" class="block mb-2">模板名称 (可选):</label>
+        <input type="text" id="template-name" class="w-full p-2 border border-gray-300 rounded mb-4">
+        <label for="time-limit" class="block mb-2">考试时长 (分钟):</label>
+        <input type="number" id="time-limit" class="w-full p-2 border border-gray-300 rounded mb-4" min="1" value="10">
+        <div id="question-fields"></div>
+        <div id="pagination" class="flex justify-between mb-4 hidden">
+            <button id="prev-question" class="bg-gray-500 text-white p-2 rounded" onclick="prevQuestionSetting()">上一题</button>
             <button id="next-question-setting" class="bg-gray-500 text-white p-2 rounded" onclick="nextQuestionSetting()">下一题</button>
         </div>
-        <button id="save-template" class="bg-yellow-500 text-white p-2 rounded" onclick="saveTemplateToFile()">保存模板为文件</button>"save-template" class="bg-yellow-500 text-white p-2 rounded" onclick="saveTemplateToFile()">保存模板为文件</button>
-        <input type="file" id="load-template-file" style="display:         <input type="file" id="load-template-file" style="display: none;" onchange="loadTemplateFromFile()">" onchange="loadTemplateFromFile()">
-        <button id="upload-template" class="bg-blue-500 text-white p-2 rounded mt-4" onclick="document.getElementById('load-template-file').click()">上传模板</button>"upload-template" class="bg-blue-500 text-white p-2 rounded mt-4" onclick="document.getElementById('load-template-file').click()">上传模板</button>
-        <button id="start-exam" class="bg-green-500 text-white p-2 rounded ml-2" onclick="startExam()">开始考试模式</button>"start-exam" class="bg-green-500 text-white p-2 rounded ml-2" onclick="startExam()">开始考试模式</button>
-        <button id="clear-settings" class="bg-red-500 text-white p-2 rounded ml-2" onclick="clearSettings()">清空设置</button>"clear-settings" class="bg-red-500 text-white p-2 rounded ml-2" onclick="clearSettings()">清空设置</button>
+        <button id="save-template" class="bg-yellow-500 text-white p-2 rounded" onclick="saveTemplateToFile()">保存模板为文件</button>
+        <input type="file" id="load-template-file" style="display: none;" onchange="loadTemplateFromFile()">
+        <button id="upload-template" class="bg-blue-500 text-white p-2 rounded mt-4" onclick="document.getElementById('load-template-file').click()">上传模板</button>
+        <button id="start-exam" class="bg-green-500 text-white p-2 rounded ml-2" onclick="startExam()">开始考试模式</button>
+        <button id="clear-settings" class="bg-red-500 text-white p-2 rounded ml-2" onclick="clearSettings()">清空设置</button>
         <div id="uploaded-templates" class="mt-4">
             <h3 class="text-lg font-bold mb-2">已上传模板</h3>
             <div id="template-list"></div>
@@ -573,57 +574,57 @@
         function retryExam() {
             document.getElementById('quiz').classList.remove('hidden');
             document.getElementById('results').classList.add('hidden');
-            当前问题索引 = 0;
-            user Answers = new Array(questions.length).fill(null);
+            currentQuestionIndex = 0;
+            userAnswers = new Array(questions.length).fill(null);
             markedQuestions = new Array(questions.length).fill(false);
             startTime = Date.now();
-            timeLimit = parseInt(document.getElementById('time-limit').value) * 60 * 1000;'time-limit').value) * 60 * 1000;
-            结束时间 = 开始时间 + 限制时间;
+            timeLimit = parseInt(document.getElementById('time-limit').value) * 60 * 1000;
+            endTime = startTime + timeLimit;
             timerInterval = setInterval(updateTimer, 1000);
-            显示问题();
-            更新答案状态();
-        }输入：}
+            showQuestion();
+            updateAnswerStatus();
+        }
 
-        function scaleImage(button) {{
+        function scaleImage(button) {
             const image = button.previousElementSibling;
-            if (image.style.transform === 'scale(2)') {'scale(2)'>) {
-                image.style.transform = 'scale(1)';'scale(1)';
-            } 否则 {} 否则 {
-                image.style.transform = 'scale(2)';'scale(2)'<>
-            }输入：}
-        }输入：}
+            if (image.style.transform === 'scale(2)') {
+                image.style.transform = 'scale(1)';
+            } else {
+                image.style.transform = 'scale(2)';
+            }
+        }
 
-        function updateAnswerStatusDisplay() {{
-            const answerStatusDiv = document.getElementById('answer-status');'answer-status');
-            answerStatusDiv.innerHTML = '';'';
-            user Answers.forEach((answer, index) => {{
+        function updateAnswerStatusDisplay() {
+            const answerStatusDiv = document.getElementById('answer-status');
+            answerStatusDiv.innerHTML = '';
+            userAnswers.forEach((answer, index) => {
                 const statusSpan = document.createElement('span');
-                statusSpan.textContent = `题目 ${index + 1}`;{索引 + 1}`;
-                if (回答 || index === 当前问题索引) {{
-                    statusSpan.style.fontWeight = 'bold';'bold';
-                    statusSpan.style.color = 'black';'black';
-                } 否则 {} else {
-                    statusSpan.style.color = 'gray';'gray';
-                }}
-                if (标记的问题[index]) {[index]) {
-                    statusSpan.style.color = 'red';'red';
-                    statusSpan.style.textDecoration = 'underline';'underline';
-                }}
+                statusSpan.textContent = `题目 ${index + 1}`;
+                if (answer || index === currentQuestionIndex) {
+                    statusSpan.style.fontWeight = 'bold';
+                    statusSpan.style.color = 'black';
+                } else {
+                    statusSpan.style.color = 'gray';
+                }
+                if (markedQuestions[index]) {
+                    statusSpan.style.color = 'red';
+                    statusSpan.style.textDecoration = 'underline';
+                }
                 answerStatusDiv.appendChild(statusSpan);
-            });});
-        }}
+            });
+        }
 
-        function markQuestion() {{
-            markedQuestions[currentQuestionIndex] = true;[currentQuestionIndex] = true;
-            const markButton = document.getElementById('mark-question');'mark-question');
-            const unmarkButton = document.getElementById('unmark-question');'unmark-question');
-            markButton.classList.add('hidden');'hidden');
-            unmarkButton.classList.remove('hidden');'hidden');
-            更新答案状态显示();
-        }}
+        function markQuestion() {
+            markedQuestions[currentQuestionIndex] = true;
+            const markButton = document.getElementById('mark-question');
+            const unmarkButton = document.getElementById('unmark-question');
+            markButton.classList.add('hidden');
+            unmarkButton.classList.remove('hidden');
+            updateAnswerStatusDisplay();
+        }
 
-        function unmarkQuestion() {{
-            markedQuestions[currentQuestionIndex] = false;[currentQuestionIndex] = false;
+        function unmarkQuestion() {
+            markedQuestions[currentQuestionIndex] = false;
             const markButton = document.getElementById('mark-question');
             const unmarkButton = document.getElementById('unmark-question');
             markButton.classList.remove('hidden');
@@ -633,7 +634,8 @@
 
         document.getElementById('question-count').addEventListener('input', generateQuestionFields);
         generateQuestionFields();
-        显示已上传的模板();
+        displayUploadedTemplates();
     </script>
+</body>
 
-
+</html>
